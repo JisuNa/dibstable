@@ -61,18 +61,24 @@
 
 ```
 com.dibstable.<service>
-├── domain/                      비즈니스 로직 — 엔터티, 포트(인터페이스)
+├── domain/                      엔터티 — 프레임워크 의존 없음
+├── application/
+│   ├── port/input/              인바운드 포트 (유스케이스)
+│   ├── port/output/             아웃바운드 포트
+│   └── service/                 애플리케이션 서비스 — 인바운드 포트 구현
 ├── adapter/
-│   ├── inbound/web/             REST 컨트롤러
-│   ├── inbound/messaging/       이벤트 컨슈머
-│   ├── outbound/persistence/    JPA 리포지터리 구현
-│   └── outbound/messaging/      아웃박스·이벤트 발행
+│   ├── input/web/               REST 컨트롤러
+│   ├── input/messaging/         이벤트 컨슈머
+│   ├── output/persistence/      JPA 엔터티·리포지터리·영속성 어댑터
+│   └── output/messaging/        아웃박스·이벤트 발행
 └── config/
 ```
 
 **비즈니스 로직은 어댑터에 의존하지 않는다** — 반대로 어댑터가 비즈니스 로직에 의존한다 (2.1.2). 디렉터리는 실제 클래스가 생길 때 만들고, 빈 디렉터리를 미리 두지 않는다.
 
-> `in`/`out`이 아니라 `inbound`/`outbound`인 이유: **`in`은 Kotlin 하드 키워드**라 `package ...adapter.in.web`이 컴파일되지 않는다. 백틱으로 감쌀 수는 있으나 모든 import에 전염된다.
+> `in`/`out`이 아니라 `input`/`output`인 이유: **`in`은 Kotlin 하드 키워드**라 `package ...adapter.in.web`이 컴파일되지 않는다. 백틱으로 감쌀 수는 있으나 모든 import에 전염되고, `out`은 되는데 `in`만 안 되는 비대칭이 남는다.
+
+> **도메인 모델과 JPA 엔터티를 분리한다.** `domain/Restaurant`는 순수 Kotlin이고 `adapter/output/persistence/RestaurantJpaEntity`가 `@Entity`를 진다. 변환은 별도 Mapper 클래스 없이 JPA 엔터티가 직접 맡는다(`toDomain()`·`from()`).
 
 ## 결과 맥락
 

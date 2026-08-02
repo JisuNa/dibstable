@@ -1,6 +1,14 @@
 spring:
   application:
     name: restaurant-service
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/restaurant_db?useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:restaurant}
+    password: ${DB_PASSWORD:restaurant}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
 
 server:
   port: ${SERVER_PORT:8080}
