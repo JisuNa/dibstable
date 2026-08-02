@@ -40,6 +40,15 @@ GRANT ALL PRIVILEGES ON restaurant_db.* TO 'restaurant'@'%';   -- 자기 것만
 
 PostgreSQL은 위의 구조적 격리라는 장점이 있었으나, **실무 전이**와 **책 정합성**(이벤추에이트 로컬이 MySQL binlog를 테일링, 6.2.1)이 더 크다고 판단했다. 잃은 격리는 계정 권한으로 보완한다.
 
+### MySQL 8.4 접속 시 주의 (지뢰 2개)
+
+| 함정 | 결과 | 대응 |
+|---|---|---|
+| JDBC URL에 `useSSL=false`만 붙임 | `Public Key Retrieval is not allowed`로 접속 실패 | 8.4는 `caching_sha2_password`만 남아 평문 구간에서 서버 공개키를 받아야 한다 → `allowPublicKeyRetrieval=true`를 함께 지정 |
+| `--default-authentication-plugin` 지정 | **서버가 아예 기동하지 않음** | 8.4에서 제거된 옵션이다. 필요하면 `authentication_policy`를 쓴다 |
+
+컨테이너는 `--default-time-zone=Asia/Seoul`로 띄운다. 기본값이 UTC라 `NOW()`가 KST와 9시간 어긋나고, [service-apis.md](../architecture/service-apis.md)의 타임존 공통 규칙과 충돌한다.
+
 ### Flyway + `ddl-auto: none`
 
 `ddl-auto`로 스키마를 만들면 아웃박스·`processed_messages` 같은 **인프라 테이블**이 엔터티 매핑에 끌려 들어가고, 10장 Testcontainers가 쓸 실 스키마도 없어진다. Flyway 마이그레이션을 유일한 스키마 출처로 삼는다.

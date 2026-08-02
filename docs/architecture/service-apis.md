@@ -54,8 +54,24 @@
 
 | 헤더 | 값 | 용도 |
 |---|---|---|
-| `message-id` | **아웃박스 행의 PK** | 컨슈머의 중복 검출 키. 재발행해도 값이 바뀌지 않아야 하므로 발행 시점에 새로 만들지 않는다 |
+| `message-id` | 아웃박스의 `message_id` (UUID) | 컨슈머의 중복 검출 키. **발행 시점에 새로 만들지 않는다** |
 | `event-type` | 이벤트 타입명 (예: `RestaurantRegistered`) | 컨슈머의 디스패치 키 |
+
+### 아웃박스 → 메시지 매핑
+
+계약이 스키마를 정한다. 구현이 반대로 하지 않도록 여기에 못박는다.
+
+| 아웃박스 컬럼 | 타입 | 메시지에서의 역할 |
+|---|---|---|
+| `id` | `BIGINT AUTO_INCREMENT` (PK) | **폴링 순서용.** 메시지에 실리지 않는다 |
+| `message_id` | `CHAR(36)` UUID | → `message-id` 헤더. 전역 유일해야 여러 서비스가 발행해도 컨슈머가 오인하지 않는다 |
+| `aggregate_type` | `VARCHAR` | 토픽 결정 (`Restaurant` → `restaurant`) |
+| `aggregate_id` | `VARCHAR` | → **파티션 키** (`restaurantId`) |
+| `event_type` | `VARCHAR` | → `event-type` 헤더 |
+| `payload` | `JSON` | → 메시지 본문 |
+| `created_at` | `DATETIME` | 진단용 |
+
+발행에 성공한 행은 **DELETE**한다. `WHERE id > 마지막_발행_ID` 방식의 워터마크는 금지 — 채번 순서와 커밋 순서가 달라 이벤트가 영구 유실된다([ADR-005](../adr/ADR-005-ipc-style.md)).
 
 ### `RestaurantRegistered`
 

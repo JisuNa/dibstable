@@ -12,5 +12,3 @@ CREATE USER IF NOT EXISTS 'payment'@'%'     IDENTIFIED BY 'payment';
 GRANT ALL PRIVILEGES ON restaurant_db.*  TO 'restaurant'@'%';
 GRANT ALL PRIVILEGES ON reservation_db.* TO 'reservation'@'%';
 GRANT ALL PRIVILEGES ON payment_db.*     TO 'payment'@'%';
-
-FLUSH PRIVILEGES;
