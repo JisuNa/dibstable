@@ -64,7 +64,7 @@
 | `ReservationCancelled` | reservation | 취소 확정 | 7장 인기 랭킹 뷰 |
 | `DepositAuthorized` | payment | 예약금 승인 성공 | 4장 사가 |
 | `DepositRefunded` | payment | 환불 완료 | 4장 사가 |
-| `RestaurantRegistered` | restaurant | 식당 등록 | 7장 검색 뷰 |
+| `RestaurantRegistered` | restaurant | 식당 등록 | reservation(레플리카, 3장) · 7장 검색 뷰 |
 
 정원 변화(`CapacityHeld` 등)는 사가 응답으로 처리되므로 도메인 이벤트로 발행하지 않는다. 필요해지면 그때 추가한다.
 

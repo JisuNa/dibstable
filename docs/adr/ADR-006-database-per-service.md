@@ -1,0 +1,77 @@
+# ADR-006: 서비스별 DB — MySQL 8.4 단일 인스턴스, database 논리 분리
+
+- **상태**: 승인
+- **날짜**: 2026-08-02
+- **관련 장**: 2장 (느슨한 결합), 3장 (인프라 도입 시점)
+
+## 문제
+
+[ADR-001](ADR-001-microservice-architecture.md)이 "DB를 공유하는 서비스 쌍이 없다"를 수용 기준으로 못 박았다. 이제 3장에서 실제 DB가 필요해졌으니 **무엇을, 어떤 단위로 나눠** 그 기준을 지킬지 정한다.
+
+## 강제 조항
+
+- 서비스별 DB는 **DB 서버를 서비스마다 두라는 뜻이 아니다** (1.4.3). 스펙트럼은 테이블 분리 → 스키마 분리 → 서버 분리다.
+- 1인 학습 프로젝트 — 개발 머신에서 전체 스택이 떠야 한다. 인스턴스 3개는 과하다.
+- 아웃박스([ADR-005](ADR-005-ipc-style.md))가 **로컬 ACID 트랜잭션**에 기대므로 RDBMS여야 한다.
+- 6장 이벤트 스토어, 10장 Testcontainers, 12장 배포가 모두 실제 DB를 전제한다 — 중간에 엔진을 갈아타면 DDL·방언·트랜잭션 시맨틱을 두 번 쓴다.
+- [ADR-003](ADR-003-tech-baseline.md)의 원칙: 인프라 결정은 그것이 필요해지는 장에서 한다.
+
+## 해법
+
+**MySQL 8.4 LTS 단일 인스턴스에 서비스별 database를 두고, 서비스마다 전용 계정으로 자기 database에만 접근한다.**
+
+| 항목 | 선택 |
+|---|---|
+| 엔진 | MySQL 8.4 LTS (8.0은 2026-04 EOL) |
+| 격리 단위 | **database 분리** — `restaurant_db` · `reservation_db` · `payment_db` |
+| 물리 분리 | **하지 않음** — 단일 컨테이너 |
+| 접근 격리 | **서비스별 계정 + 자기 database에만 GRANT** |
+| 스키마 관리 | **Flyway**, 모든 서비스 `ddl-auto: none` |
+
+### 접근 격리를 계정으로 하는 이유
+
+MySQL은 **크로스 database 조인이 그냥 된다**(`db1.t JOIN db2.t`). PostgreSQL이라면 database 간 조인이 원천 불가라 격리가 구조로 보장되지만, MySQL을 택한 이상 그 안전장치가 없다. 그래서 권한 계층으로 대신한다 — 서비스가 자기 계정으로만 붙으면 남의 database는 조회 자체가 실패한다([init.sql](../../infra/mysql/init.sql)).
+
+```sql
+GRANT ALL PRIVILEGES ON restaurant_db.* TO 'restaurant'@'%';   -- 자기 것만
+```
+
+### MySQL을 택한 이유 (vs PostgreSQL)
+
+PostgreSQL은 위의 구조적 격리라는 장점이 있었으나, **실무 전이**와 **책 정합성**(이벤추에이트 로컬이 MySQL binlog를 테일링, 6.2.1)이 더 크다고 판단했다. 잃은 격리는 계정 권한으로 보완한다.
+
+### MySQL 8.4 접속 시 주의 (지뢰 2개)
+
+| 함정 | 결과 | 대응 |
+|---|---|---|
+| JDBC URL에 `useSSL=false`만 붙임 | `Public Key Retrieval is not allowed`로 접속 실패 | 8.4는 `caching_sha2_password`만 남아 평문 구간에서 서버 공개키를 받아야 한다 → `allowPublicKeyRetrieval=true`를 함께 지정 |
+| `--default-authentication-plugin` 지정 | **서버가 아예 기동하지 않음** | 8.4에서 제거된 옵션이다. 필요하면 `authentication_policy`를 쓴다 |
+
+컨테이너는 `--default-time-zone=Asia/Seoul`로 띄운다. 기본값이 UTC라 `NOW()`가 KST와 9시간 어긋나고, [service-apis.md](../architecture/service-apis.md)의 타임존 공통 규칙과 충돌한다.
+
+### Flyway + `ddl-auto: none`
+
+`ddl-auto`로 스키마를 만들면 아웃박스·`processed_messages` 같은 **인프라 테이블**이 엔터티 매핑에 끌려 들어가고, 10장 Testcontainers가 쓸 실 스키마도 없어진다. Flyway 마이그레이션을 유일한 스키마 출처로 삼는다.
+
+> **payment-service는 3장에서 DB를 붙이지 않는다.** 저장할 엔터티가 0개인데 JPA를 붙이면 컨텍스트가 뜨지 않고, 6장 이벤트 소싱에서 어차피 다시 설계한다. `payment_db`와 계정만 미리 만들어 격리 검증의 대칭만 확보한다.
+
+## 결과 맥락
+
+- **장점**: 컨테이너 하나로 전체 스택 기동, 계정 권한으로 접근 격리, Flyway로 스키마 이력 관리, 아웃박스의 로컬 트랜잭션 전제 충족.
+- **단점**
+  - **리소스 격리가 없다** — 한 서비스가 커넥션 풀이나 CPU를 소진하면 다른 서비스가 느려진다. 이건 엔진이 아니라 인스턴스를 나누지 않은 결과다.
+  - 접근 격리가 엔진 구조가 아닌 **권한 설정에 의존**한다. 계정 설정을 잘못하면 뚫린다.
+  - 개발 편의로 root 계정을 쓰기 시작하면 격리가 즉시 무너진다.
+- **새로 생긴 이슈**
+
+| 이슈 | 해결 | 장 |
+|---|---|---|
+| 리소스 격리(노이지 네이버) | 서비스별 컨테이너·인스턴스 분리 | 12장 |
+| 테스트가 로컬 DB에 의존 | Testcontainers | 10장 |
+| 자격 증명이 구성 파일에 평문 | 외부화 구성·시크릿 | 11장 |
+
+## 연관 패턴
+
+- **선행자**: [ADR-001](ADR-001-microservice-architecture.md) — "DB 공유 금지" 수용 기준의 실현
+- **동반**: [ADR-005](ADR-005-ipc-style.md) — 아웃박스가 이 DB의 로컬 트랜잭션 위에서 동작한다
+- **대안(기각)**: PostgreSQL(구조적 격리 우위, 실무 전이·책 정합성에서 열세) · 서비스별 인스턴스(학습 규모에 과함) · 스키마 분리(MySQL에서는 database와 동의어라 의미 없음)
