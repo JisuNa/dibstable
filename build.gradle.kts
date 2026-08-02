@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.spring.dependency.management) apply false
 }
 
+val kotestVersion = libs.versions.kotest.get()
+
 subprojects {
     apply(plugin = "org.jetbrains.kotlin.jvm")
     apply(plugin = "org.jetbrains.kotlin.plugin.spring")
@@ -19,10 +21,12 @@ subprojects {
     }
 
     dependencies {
-        "implementation"("org.springframework.boot:spring-boot-starter")
+        "implementation"("org.springframework.boot:spring-boot-starter-web")
         "implementation"("com.fasterxml.jackson.module:jackson-module-kotlin")
         "implementation"("org.jetbrains.kotlin:kotlin-reflect")
         "testImplementation"("org.springframework.boot:spring-boot-starter-test")
+        "testImplementation"("io.kotest:kotest-runner-junit5:$kotestVersion")
+        "testImplementation"("io.kotest:kotest-extensions-spring:$kotestVersion")
     }
 
     tasks.withType<Test> {

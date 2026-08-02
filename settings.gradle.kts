@@ -10,6 +10,10 @@ dependencyResolutionManagement {
 
 rootProject.name = "dibstable"
 
-// 서비스 모듈은 2장(분해 전략)의 산출물로 추가된다.
-// 예정: reservation-service, restaurant-service, payment-service,
-//       search-service, waiting-service, api-gateway
+include(
+    "reservation-service",
+    "restaurant-service",
+    "payment-service",
+)
+
+// search-service(7장) · api-gateway(8장) · waiting-service(13장)는 해당 장에서 추가한다.

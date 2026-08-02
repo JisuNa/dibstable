@@ -1,0 +1,6 @@
+spring:
+  application:
+    name: reservation-service
+
+server:
+  port: ${SERVER_PORT:8080}
