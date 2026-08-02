@@ -1,0 +1,7 @@
+CREATE TABLE restaurants
+(
+    id      BIGINT UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '식당 ID',
+    name    VARCHAR(100)    NOT NULL COMMENT '식당명',
+    address VARCHAR(255)    NOT NULL COMMENT '주소',
+    PRIMARY KEY (id)
+) ENGINE = InnoDB COMMENT = '식당';
