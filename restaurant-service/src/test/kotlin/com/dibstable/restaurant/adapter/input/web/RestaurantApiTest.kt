@@ -22,11 +22,14 @@ import org.springframework.test.web.servlet.post
 @ApplyExtension(SpringExtension::class)
 class RestaurantApiTest(private val mockMvc: MockMvc) : FunSpec({
 
-    fun register(name: String, address: String): MockHttpServletResponse =
+    fun post(body: String): MockHttpServletResponse =
         mockMvc.post("/restaurants") {
             contentType = MediaType.APPLICATION_JSON
-            content = """{"name":"$name","address":"$address"}"""
+            content = body
         }.andReturn().response
+
+    fun register(name: String, address: String): MockHttpServletResponse =
+        post("""{"name":"$name","address":"$address"}""")
 
     test("식당을 등록하면 201과 Location을 돌려준다") {
         val response = register("딥스식당 강남점", "서울 강남구 테헤란로 1")
@@ -43,6 +46,14 @@ class RestaurantApiTest(private val mockMvc: MockMvc) : FunSpec({
 
     test("주소가 공백이면 400을 돌려준다") {
         register("딥스식당 강남점", "").status shouldBe 400
+    }
+
+    test("이름 필드가 아예 없으면 400을 돌려준다") {
+        post("""{"address":"서울 강남구 테헤란로 1"}""").status shouldBe 400
+    }
+
+    test("주소 필드가 아예 없으면 400을 돌려준다") {
+        post("""{"name":"딥스식당 강남점"}""").status shouldBe 400
     }
 
     test("등록한 식당을 조회한다") {

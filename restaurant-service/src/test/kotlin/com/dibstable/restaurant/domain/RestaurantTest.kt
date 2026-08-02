@@ -25,6 +25,17 @@ class RestaurantTest : FunSpec({
             Restaurant("딥스식당 강남점", "서울 강남구")
     }
 
+    test("식별자가 같으면 해시도 같다") {
+        Restaurant("딥스식당 강남점", "서울 강남구", id = 1).hashCode() shouldBe
+            Restaurant("딥스식당 판교점", "경기 성남시", id = 1).hashCode()
+    }
+
+    test("서로 다른 식당은 해시가 흩어진다") {
+        val hashes = (1L..100L).map { Restaurant("딥스식당", "서울 강남구", id = it).hashCode() }
+
+        hashes.toSet().size shouldBe 100
+    }
+
     test("저장 전이라도 자기 자신과는 같다") {
         val restaurant = Restaurant("딥스식당 강남점", "서울 강남구")
 

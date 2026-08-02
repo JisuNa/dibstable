@@ -19,7 +19,7 @@ class Restaurant(
         return id != UNSAVED_ID && id == other.id
     }
 
-    override fun hashCode(): Int = javaClass.hashCode()
+    override fun hashCode(): Int = id.hashCode()
 
     companion object {
         private const val UNSAVED_ID = 0L
