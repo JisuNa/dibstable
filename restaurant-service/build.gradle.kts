@@ -14,9 +14,19 @@ allOpen {
 dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-validation")
+    implementation("org.springframework.kafka:spring-kafka")
     runtimeOnly("org.flywaydb:flyway-mysql")
     runtimeOnly("com.mysql:mysql-connector-j")
 
     testImplementation("org.springframework.boot:spring-boot-testcontainers")
     testImplementation("org.testcontainers:mysql")
+    // spring-boot-testcontainers는 연동 글루일 뿐이라 기술별 모듈이 따로 필요하다.
+    testImplementation("org.testcontainers:kafka")
+}
+
+tasks.test {
+    // 폴링이 돌면 다른 스펙이 방금 넣은 아웃박스 행을 지워 간섭한다.
+    // src/test/resources/application.yml로 두면 안 된다 — 같은 이름이 클래스패스에서 먼저 잡혀
+    // main의 application.yml을 통째로 가린다(datasource·jpa·kafka 설정이 전부 사라진다).
+    systemProperty("dibstable.outbox.relay.enabled", "false")
 }
