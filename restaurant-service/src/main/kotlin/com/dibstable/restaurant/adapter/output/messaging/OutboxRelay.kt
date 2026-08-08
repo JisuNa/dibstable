@@ -50,8 +50,7 @@ class OutboxRelay(
     companion object {
         private const val SEND_TIMEOUT_SECONDS = 10L
 
-        // service-apis.md가 정한 헤더명. 테스트는 이 상수를 참조하지 않고 리터럴로 단언한다 —
-        // 상수를 공유하면 값이 바뀌어도 테스트가 따라가버려 계약 위반을 못 잡는다.
+        // service-apis.md가 정한 헤더명
         private const val MESSAGE_ID_HEADER = "message-id"
         private const val EVENT_TYPE_HEADER = "event-type"
     }

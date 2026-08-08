@@ -1,6 +1,23 @@
 spring:
   application:
     name: reservation-service
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/reservation_db?useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:reservation}
+    password: ${DB_PASSWORD:reservation}
+  jpa:
+    hibernate:
+      ddl-auto: none
+    open-in-view: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: reservation-service
+      auto-offset-reset: earliest
+    listener:
+      # DB 커밋 뒤에 오프셋이 커밋돼야 재기동 시 미처리 메시지를 다시 받는다.
+      # 기본값도 BATCH지만 멱등 처리의 전제라 암묵적 기본값에 기대지 않고 명시한다.
+      ack-mode: batch
 
 server:
   port: ${SERVER_PORT:8080}

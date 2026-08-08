@@ -175,6 +175,49 @@ sequenceDiagram
     RV->>K: 오프셋 커밋 (T3 밖)
 ```
 
+위 다이어그램이 정상 경로의 시간 순서를 보여준다면, 아래 순서도는 **어디서 갈라지고 어디서 실패하는지**를 보여준다.
+
+```mermaid
+flowchart TD
+    A["POST /restaurants"] --> B
+
+    subgraph T1["T1 · restaurant-service — 한 트랜잭션"]
+        B["restaurants INSERT"] --> C["outbox INSERT<br/>message_id = UUID 채번"]
+    end
+
+    C --> D{"커밋"}
+    D -->|실패| E["둘 다 롤백<br/>식당도 이벤트도 없다"]
+    D -->|성공| F["201 Created<br/>Kafka는 아직 관여하지 않는다"]
+
+    F -.->|"이후 비동기"| G
+
+    subgraph T2["T2 · 릴레이 — 행마다 별도 트랜잭션"]
+        G["500ms 폴링<br/>SELECT … ORDER BY id LIMIT 100"] --> H["Kafka send<br/>key = restaurantId<br/>header: message-id · event-type"]
+        H --> I{"ack"}
+        I -->|실패| J["로그만 남기고 다음 행으로<br/>행이 남아 다음 회차에 재발행"]
+        I -->|성공| K["outbox DELETE"]
+    end
+
+    K --> L(["토픽 restaurant · 파티션 3개"])
+    H -.->|"ack 후 DELETE 전 크래시<br/>= 의도된 중복"| L
+
+    L --> M{"event-type"}
+    M -->|"RestaurantRegistered 아님"| N["무시"]
+
+    subgraph T3["T3 · reservation-service — 한 트랜잭션"]
+        O["INSERT IGNORE<br/>processed_messages"] --> P{"삽입 행 수"}
+        P -->|"0 — 이미 처리한 메시지"| Q["아무것도 하지 않는다"]
+        P -->|"1 — 처음 보는 메시지"| R["restaurant_replicas INSERT"]
+    end
+
+    M -->|RestaurantRegistered| O
+    R --> S["커밋"]
+    Q --> S
+    S --> U["Kafka 오프셋 커밋 — 트랜잭션 밖<br/>여기서 죽으면 재전달되고 P가 걸러낸다"]
+```
+
+세 지점만 짚어둔다. **`D`의 두 갈래**가 아웃박스의 존재 이유다 — "식당은 있는데 이벤트가 없는" 상태가 그림에 없다는 것 자체가 요점이다. **`H`에서 `L`로 가는 점선**이 중복이 태어나는 유일한 지점이고, 없애려 하지 않고 `P`가 흡수하게 했다. **`S`와 `U`가 나뉜 것**이 멱등이 필요한 이유 전부다 — DB 커밋과 오프셋 커밋은 원자적으로 묶을 수 없다.
+
 ### T1 — 등록과 기록 (restaurant-service, 한 트랜잭션)
 
 1. `restaurants`에 식당을 저장한다.
