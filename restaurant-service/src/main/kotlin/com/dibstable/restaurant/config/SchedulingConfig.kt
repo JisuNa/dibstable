@@ -1,6 +1,6 @@
 package com.dibstable.restaurant.config
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.EnableScheduling
 
@@ -8,5 +8,5 @@ import org.springframework.scheduling.annotation.EnableScheduling
 // src/test/resources/application.yml이 이 값을 false로 내리고, 릴레이 테스트는 relay()를 직접 부른다.
 @Configuration
 @EnableScheduling
-@ConditionalOnProperty(name = ["dibstable.outbox.relay.enabled"], matchIfMissing = true)
+@ConditionalOnBooleanProperty(name = ["dibstable.outbox.relay.enabled"], matchIfMissing = true)
 class SchedulingConfig
