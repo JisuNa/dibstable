@@ -52,20 +52,55 @@ class RestaurantEventConsumerTest(
 
         replicas.findByIdOrNull(8L) shouldBe null
     }
+
+    test("같은 message-id를 두 번 받아도 부수 효과는 한 번뿐이다") {
+        val messageId = UUID.randomUUID().toString()
+        kafka.publish(
+            restaurantId = 11,
+            name = "딥스식당 성수점",
+            address = "서울 성동구 아차산로 11",
+            messageId = messageId,
+            partitionKey = DUPLICATE_KEY,
+        )
+        eventually { replicas.findByIdOrNull(11L) }
+
+        // 같은 message-id에 내용만 바꿔 다시 보낸다. 중복 검출이 없으면 레플리카가 덮어써진다.
+        // 행 수나 processed_at으로는 못 잡는다 — 같은 PK라 행 수는 1로 유지되고
+        // processed_at도 UPDATE 대상이 아니라 그대로여서 잘못된 구현이 통과한다.
+        kafka.publish(
+            restaurantId = 11,
+            name = "덮어쓰기",
+            address = "덮어쓰기",
+            messageId = messageId,
+            partitionKey = DUPLICATE_KEY,
+        )
+        // 같은 파티션 키의 표지 메시지가 처리됐다면 위 중복은 이미 지나간 뒤다.
+        kafka.publish(
+            restaurantId = 12,
+            name = "딥스식당 왕십리점",
+            address = "서울 성동구 왕십리로 12",
+            partitionKey = DUPLICATE_KEY,
+        )
+        eventually { replicas.findByIdOrNull(12L) }
+
+        eventually { replicas.findByIdOrNull(11L) }.name shouldBe "딥스식당 성수점"
+    }
 })
 
 private const val SHARED_KEY = "8"
+private const val DUPLICATE_KEY = "11"
 
 private fun KafkaTemplate<String, String>.publish(
     restaurantId: Long,
     name: String,
     address: String,
+    messageId: String = UUID.randomUUID().toString(),
     eventType: String = "RestaurantRegistered",
     partitionKey: String = restaurantId.toString(),
 ) {
     val payload = """{"restaurantId":$restaurantId,"name":"$name","address":"$address"}"""
     val record = ProducerRecord("restaurant", partitionKey, payload)
-    record.headers().add("message-id", UUID.randomUUID().toString().toByteArray())
+    record.headers().add("message-id", messageId.toByteArray())
     record.headers().add("event-type", eventType.toByteArray())
 
     send(record).get()
