@@ -9,6 +9,19 @@ spring:
     hibernate:
       ddl-auto: none
     open-in-view: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all
+      properties:
+        # Kafka 3.0+ 기본값이지만 명시한다. 재시도가 메시지 순서를 뒤집지 않게 하는 전제라서다.
+        enable.idempotence: true
+        # 릴레이는 단일 스케줄러 스레드에서 발행을 기다린다. 기본값(메타데이터 대기 60초,
+        # 전달 재시도 120초)이면 브로커 장애 때 한 회차가 수십 분 묶인다.
+        # 릴레이의 대기 상한(10초)과 어긋나지 않도록 프로듀서 쪽도 함께 낮춘다.
+        max.block.ms: 5000
+        request.timeout.ms: 5000
+        delivery.timeout.ms: 10000
 
 server:
   port: ${SERVER_PORT:8080}

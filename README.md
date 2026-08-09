@@ -29,7 +29,7 @@
 |---|---|---|---|
 | 1 | 기반 구축 — 요구사항·ADR·확장 큐브·빌드 뼈대 | ✅ | [requirements](docs/requirements.md) · [ADR-001](docs/adr/ADR-001-microservice-architecture.md) · [ADR-002](docs/adr/ADR-002-monorepo-gradle-multimodule.md) · [ADR-003](docs/adr/ADR-003-tech-baseline.md) · [scale-cube](docs/architecture/scale-cube.md) |
 | 2 | 분해 전략 — 시스템 작업·서비스 경계·모듈 3개 | ✅ | [system-operations](docs/architecture/system-operations.md) · [ADR-004](docs/adr/ADR-004-service-boundaries.md) |
-| 3 | IPC — REST·Kafka·트랜잭셔널 아웃박스·멱등 컨슈머 | 🚧 | [ADR-005](docs/adr/ADR-005-ipc-style.md) · [ADR-006](docs/adr/ADR-006-database-per-service.md) · [service-apis](docs/architecture/service-apis.md) |
+| 3 | IPC — REST·Kafka·트랜잭셔널 아웃박스·멱등 컨슈머 | ✅ | [ADR-005](docs/adr/ADR-005-ipc-style.md) · [ADR-006](docs/adr/ADR-006-database-per-service.md) · [service-apis](docs/architecture/service-apis.md) · [outbox-plan](docs/architecture/outbox-plan.md) |
 | 4 | 사가 — 예약 생성·취소 사가, 보상 트랜잭션 | ⬜ | |
 | 5 | 애그리거트 — 불변 값·낙관적 잠금·도메인 이벤트 | ⬜ | |
 | 6 | 이벤트 소싱 — payment-service | ⬜ | |
